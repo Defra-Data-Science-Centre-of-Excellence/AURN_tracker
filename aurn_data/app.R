@@ -94,7 +94,7 @@ server <- function(input, output) {
     
     
     # Filter data for selected site
-    site_data <- monthly_pm_data |> 
+    site_data <- monthly_data |> 
       filter(code == selected_site()) 
     
     # Select only numeric columns (pollutants) and create xts object.
@@ -118,7 +118,7 @@ server <- function(input, output) {
     req(selected_site())
     
     # Filter data for selected site
-    site_data <- monthly_pm_data |> 
+    site_data <- monthly_data |> 
       filter(code == selected_site()) |> 
       mutate(month = month(date)) |>
       group_by(month) |>

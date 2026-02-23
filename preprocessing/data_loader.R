@@ -11,7 +11,7 @@ library(plotly)
 
 
 
-network_meta_data<- importMeta(source = c("aurn", "aqe", "saqn", "waqn")) 
+network_meta_data <- importMeta(source = c("aurn", "aqe", "saqn", "waqn")) 
 
 
 monthly_pm_data <- importUKAQ(year = 2015:2025,  pollutant = c("pm2.5", "pm10"), verbose = T, data_type = "monthly", source = c("aurn")) |> #, "aqe", "saqn", "waqn", "ni", "local"
