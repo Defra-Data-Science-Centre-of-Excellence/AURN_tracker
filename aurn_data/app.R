@@ -8,23 +8,26 @@ library(dygraphs)
 library(plotly)
 
 
-# 
-# todays_date <- today(tzone = "UTC")
-# 
-# 
-# network_meta_data<- importMeta(source = c("aurn", "aqe", "saqn", "waqn")) 
-# 
-# 
-# monthly_pm_data <- importUKAQ(year = 2015:2025,  pollutant = c("pm2.5", "pm10"), verbose = T, data_type = "daily", source = c("aurn")) |> #, "aqe", "saqn", "waqn", "ni", "local"
-#   filter(if_any(c(pm2.5, pm10), ~ !is.na(.)))  
-# 
-# 
-# network_locations <- network_meta_data |> 
-#   filter(code %in% monthly_pm_data$code)
+
+todays_date <- today(tzone = "UTC")
+
+
+network_meta_data<- importMeta(source = c("aurn", "aqe", "saqn", "waqn"))
+
+
+monthly_data <- importUKAQ(year = 2015:2025,  pollutant = c("pm2.5", "pm10", "no2"), verbose = T, data_type = "monthly", source = c("aurn")) |> #, "aqe", "saqn", "waqn", "ni", "local"
+  filter(if_any(c(pm2.5, pm10), ~ !is.na(.)))
+
+
+network_locations <- network_meta_data |>
+  filter(code %in% monthly_data$code)
 
 
 
-# Define UI for application that draws a histogram
+
+
+
+# Define UI
 ui <- dashboardPage(
   skin = "green",
   dashboardHeader(title = "AURN data"),
@@ -35,22 +38,26 @@ ui <- dashboardPage(
       width = 6, 
       leafletOutput("map")
       ),
-    box(
-      width = 6,
-      valueBoxOutput("compliancebox_pm2.5", width = 6), 
-      valueBoxOutput("compliancebox_pm10", width = 6)# dygraphOutput("timeseries")
-    )
-  ),
+    box( width = 6, 
+         # Row for the two value boxes 
+         fluidRow( column(width = 1.5, valueBoxOutput("compliancebox_pm2.5")), 
+                   column(width = 1.5, valueBoxOutput("compliancebox_pm10")) ,
+                   column(width = 1.5, valueBoxOutput("compliancebox_no2"))), 
+         # Row for the plot underneath 
+         fluidRow( column(width = 12, plotlyOutput("monthly_averages", height = "300px"))
+                   )
+         ),
+    
   fluidRow(
     box(
-      title = "Monthly Averages",
+      title = "Full Data Time Series",
       width = 12, 
-      plotlyOutput("monthly_averages")
-      # dygraphOutput("timeseries")
+     
+      dygraphOutput("timeseries")
     )
     )
  )
-)
+))
 
 
 # Define server logic required to draw a histogram
@@ -151,7 +158,8 @@ server <- function(input, output) {
         scale_y_continuous(name = "PM Concentration", limits = c(0,NA), expand = c(0,0)) +
         theme_classic() +
         theme(panel.grid.major.y = element_line(colour = "lightgrey"),
-              panel.grid.minor.y = element_line(colour = "lightgrey"))
+              panel.grid.minor.y = element_line(colour = "lightgrey")) +
+        ggtitle("Monthly PM Averages")
       
     )
     
@@ -165,7 +173,7 @@ server <- function(input, output) {
     
     req(selected_site())
     
-    pm_average_year <- monthly_pm_data |> 
+    pm_average_year <- monthly_data |> 
       filter(code == selected_site()) |> 
       filter(between(date, max(date) - months(11), max(date))) |> 
       summarise(annual_average = mean(pm2.5, na.rm = T)) |> 
@@ -197,7 +205,7 @@ server <- function(input, output) {
     
     req(selected_site())
     
-    pm_average_year <- monthly_pm_data |> 
+    pm_average_year <- monthly_data |> 
       filter(code == selected_site()) |> 
       filter(between(date, max(date) - months(11), max(date))) |> 
       summarise(annual_average = mean(pm10, na.rm = T)) |> 
@@ -209,7 +217,7 @@ server <- function(input, output) {
     
     
     
-    value_box_colour <- if (pm_average_year > 10){
+    value_box_colour <- if (pm_average_year > 20){
       colour = "red"
     } else {
       colour = "green"
@@ -219,6 +227,37 @@ server <- function(input, output) {
     valueBox(
       round(pm_average_year, 2), 
       "12 month average PM10 at site",
+      icon = icon("smog"),
+      color = value_box_colour
+    )
+  })
+  
+  output$compliancebox_no2 <- renderValueBox({
+    
+    req(selected_site())
+    
+    no2_average_year <- monthly_data |> 
+      filter(code == selected_site()) |> 
+      filter(between(date, max(date) - months(11), max(date))) |> 
+      summarise(annual_average = mean(no2, na.rm = T)) |> 
+      pull()
+    
+    validate(
+      need(!is.na(no2_average_year), "No NO2 data available for this site")
+    )
+    
+    
+    
+    value_box_colour <- if (no2_average_year > 40){
+      colour = "red"
+    } else {
+      colour = "green"
+    }
+    
+    
+    valueBox(
+      round(no2_average_year, 2), 
+      "12 month average NO2 at site",
       icon = icon("smog"),
       color = value_box_colour
     )
